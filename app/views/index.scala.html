@@ -1,5 +1,10 @@
 @()
 
-@main("Welcome to Play") {
-  <h1>Welcome to Play!</h1>
+@main("功能选择") {
+<li>
+    <div><ul>
+        <li>日志分析<a href="@routes.AnalyzerController.createForm">@routes.AnalyzerController.createForm</a></li>
+        <li>日志阅读<a href="@routes.HomeController.index">@routes.HomeController.index</a></li>
+    </ul></div>
+</li>
 }

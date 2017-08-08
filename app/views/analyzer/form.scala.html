@@ -1,0 +1,39 @@
+@(userForm: Form[DataToAnalyze])(implicit request: RequestHeader, messagesProvider: MessagesProvider)
+
+@import helper._
+
+@main("日志分析") {
+
+@helper.form(action = routes.AnalyzerController.post(), 'enctype -> "multipart/form-data") {
+
+@CSRF.formField
+
+@helper.select(
+field = userForm("platform"),
+options = Seq(
+"android" -> "Android",
+"ios" -> "iOS",
+"pc" -> "PC",
+"osx" -> "OS X",
+"web" -> "Web"
+), '_default -> "选择运行平台")
+
+@helper.inputText(userForm("version"), 'placeholder -> "SDK 版本")
+
+@helper.select(
+field = userForm("problem"),
+options = Seq(
+"1" -> "没有画面",
+"2" -> "无法接受离线消息",
+"3" -> "应用崩溃"
+),
+'_default -> "选择问题描述")
+
+<input type="file" name="logfile">
+
+<div class="form-actions">
+    <button type="submit">开始分析</button>
+</div>
+}
+
+}

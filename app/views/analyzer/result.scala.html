@@ -1,0 +1,8 @@
+@(helpInfo: String, optHelpPage: Option[String])
+
+@main("分析结果") {
+<p class="lead">帮助信息：@helpInfo</p>
+@for(helpPage <- optHelpPage) {
+<p class="lead">更多帮助请参阅：<a href="@helpPage">@helpPage</a></p>
+}
+}
