@@ -4,36 +4,37 @@
 
 @main("日志分析") {
 
-@helper.form(action = routes.AnalyzerController.post(), 'enctype -> "multipart/form-data") {
+    @helper.form(action = routes.AnalyzerController.submit(), 'enctype -> "multipart/form-data") {
 
-@CSRF.formField
+        @CSRF.formField
 
-@helper.select(
-field = userForm("platform"),
-options = Seq(
-"android" -> "Android",
-"ios" -> "iOS",
-"pc" -> "PC",
-"osx" -> "OS X",
-"web" -> "Web"
-), '_default -> "选择运行平台")
+        @helper.select(
+            field = userForm("platform"),
+            options = Seq(
+                "android" -> "Android",
+                "ios" -> "iOS",
+                "pc" -> "PC",
+                "osx" -> "OS X",
+                "web" -> "Web"
+            ),
+            '_label -> "运行平台", '_showConstraints -> false
+        )
 
-@helper.inputText(userForm("version"), 'placeholder -> "SDK 版本")
+        @helper.inputText(userForm("version"), '_label -> "SDK 版本", 'placeholder -> "版本号", '_showConstraints -> false)
 
-@helper.select(
-field = userForm("problem"),
-options = Seq(
-"1" -> "没有画面",
-"2" -> "无法接受离线消息",
-"3" -> "应用崩溃"
-),
-'_default -> "选择问题描述")
+        @helper.select(
+            field = userForm("problem"),
+            options = Seq(
+                "1" -> "没有画面",
+                "2" -> "无法接受离线消息",
+                "3" -> "应用崩溃"
+            ),
+            '_label -> "问题描述", '_showConstraints -> false
+        )
 
-<input type="file" name="logfile">
+        <p>日志文件</p>
+        <input type="file" name="logfile">
 
-<div class="form-actions">
-    <button type="submit">开始分析</button>
-</div>
-}
-
+        <button type="submit" class="btn">开始分析</button>
+    }
 }

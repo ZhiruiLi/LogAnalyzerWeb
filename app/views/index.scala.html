@@ -1,10 +1,8 @@
 @()
 
 @main("功能选择") {
-<li>
-    <div><ul>
-        <li>日志分析<a href="@routes.AnalyzerController.createForm">@routes.AnalyzerController.createForm</a></li>
-        <li>日志阅读<a href="@routes.HomeController.index">@routes.HomeController.index</a></li>
-    </ul></div>
-</li>
+<div><ul>
+    <li><a class="lead" href="@routes.AnalyzerController.createForm">日志分析</a></li>
+    <li><a class="lead" href="@routes.HomeController.index">日志阅读</a></li>
+</ul></div>
 }
