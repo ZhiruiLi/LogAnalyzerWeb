@@ -20,7 +20,16 @@
             '_label -> "运行平台", '_showConstraints -> false
         )
 
-        @helper.inputText(dataForm("version"), '_label -> "SDK 版本", 'placeholder -> "版本号", '_showConstraints -> false)
+        @* @helper.inputText(dataForm("version"), '_label -> "SDK 版本", 'placeholder -> "版本号", '_showConstraints -> false) *@
+
+        @helper.select(
+            field = dataForm("version"),
+            options = Seq(
+                "1.0.0" -> "1.0.0"
+            ),
+            '_label -> "问题描述",
+            '_showConstraints -> false
+        )
 
         @helper.select(
             field = dataForm("problem"),
