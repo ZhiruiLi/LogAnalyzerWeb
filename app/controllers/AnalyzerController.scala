@@ -7,7 +7,7 @@ import javax.inject.Inject
 
 import com.example.zhiruili.loganalyzer._
 import com.example.zhiruili.loganalyzer.analyzer.LogAnalyzer.{AnalyzeResult, NoSuchProblemException}
-import com.example.zhiruili.loganalyzer.analyzer.config.ConfigParser.HelpInfo
+import com.example.zhiruili.loganalyzer.analyzer.config.AnalyzerConfig.HelpInfo
 import com.example.zhiruili.loganalyzer.analyzer.{LogAnalyzerLoader, SimpleLogAnalyzerLoader}
 import com.example.zhiruili.loganalyzer.logs._
 import controllers.AnalyzerController._
