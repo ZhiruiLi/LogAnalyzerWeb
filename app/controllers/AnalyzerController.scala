@@ -1,11 +1,12 @@
 package controllers
 
+import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Date
 import javax.inject.Inject
 
 import com.example.zhiruili.loganalyzer._
-import com.example.zhiruili.loganalyzer.analyzer.LogAnalyzer.NoSuchProblemException
+import com.example.zhiruili.loganalyzer.analyzer.LogAnalyzer.{AnalyzeResult, NoSuchProblemException}
 import com.example.zhiruili.loganalyzer.analyzer.config.ConfigParser.HelpInfo
 import com.example.zhiruili.loganalyzer.analyzer.{LogAnalyzerLoader, SimpleLogAnalyzerLoader}
 import com.example.zhiruili.loganalyzer.logs._
@@ -24,8 +25,8 @@ class AnalyzerController @Inject()(cc: ControllerComponents) extends AbstractCon
 
   val dataToAnalyze = Form(
     mapping(
-      "platform" -> text.verifying(Constraints.pattern(".+".r, "", "请提供运行平台")),
-      "version" -> text.verifying(Constraints.pattern("""\d+\.\d+\.\d+""".r, "", "版本号必须满足 a.b.c 的格式")),
+      "platform" -> text,
+      "version" -> text.verifying(Constraints.pattern("""\s*\d+\.\d+\.\d+\s*""".r, "", "版本号必须满足 a.b.c 的格式")),
       "problem" -> number
     )(DataToAnalyze.apply)(DataToAnalyze.unapply))
 
@@ -40,48 +41,46 @@ class AnalyzerController @Inject()(cc: ControllerComponents) extends AbstractCon
     }
 
     val successFunction = { data: DataToAnalyze =>
-      val trySdk = Success(ILiveSdk)
-      val tryPlt = data.platform match {
-        case "android" => Success(PlatformAndroid)
-        case "ios" => Success(PlatformIOS)
-        case "pc" => Success(PlatformPC)
-        case "osx" => Success(PlatformOSX)
-        case "web" => Success(PlatformWeb)
-        case _ => Failure(UnknownPlatformException(data.platform))
-      }
-      val tryVer = Success(data.version)
-      lazy val tryFileStr = for {
-        log <- Try { request.body.file("logfile").get }
-        content <- Try { Source.fromFile(log.ref).mkString }
-      } yield content
-      val analyzeRes = for {
-        sdk <- trySdk
-        platform <- tryPlt
-        version <- tryVer
-        analyzer <- analyzerLoader.loadAnalyzer(sdk, platform, version)
-        content <- tryFileStr
-        logItems <- logParser.parseLogString(content)
-        res <- analyzer.analyzeLogs(data.problem)(logItems)
-      } yield res
-      analyzeRes match {
-        case Failure(UnknownPlatformException(platform)) =>
-          Ok(views.html.analyzer.result(List((s"找不到指定的平台：$platform", None, Nil))))
-        case Failure(NoSuchProblemException(problem)) =>
-          Ok(views.html.analyzer.result(List((s"没有代号为 '$problem' 的问题", None, Nil))))
-        case Failure(thw) =>
-          Ok(views.html.analyzer.result(List((s"分析失败：$thw", None, Nil))))
-        case Success(Nil) =>
-          Ok(views.html.analyzer.result(List(("未能分析出相关问题", Some("https://www.qcloud.com/document/product/268/7752"), Nil))))
-        case Success(analyzeResult) =>
-          val resultToShow = analyzeResult.map {
-            case (matchLogs, HelpInfo(helpMsg, optHelpPage)) =>
-              (helpMsg, optHelpPage, matchLogs.map(log => (logColor(log), formatLog(log))))
-          }
-          Ok(views.html.analyzer.result(resultToShow))
-      }
+      request.body.file("logfile").map { log =>
+        analyzeLog(data.platform, data.version.trim, data.problem, log.ref) match {
+          case Failure(UnknownPlatformException(platform)) =>
+            Ok(views.html.analyzer.failure(s"找不到指定的平台：$platform"))
+          case Failure(NoSuchProblemException(problem)) =>
+            Ok(views.html.analyzer.failure(s"没有代号为 $problem 的问题"))
+          case Failure(thw) =>
+            Ok(views.html.analyzer.failure(s"发生内部错误：$thw"))
+          case Success(Nil) =>
+            val msg = List(("未能分析出相关问题", Some("https://www.qcloud.com/document/product/268/7752"), Nil))
+            Ok(views.html.analyzer.result(msg))
+          case Success(analyzeResult) =>
+            val resultToShow = analyzeResult.map {
+              case (matchLogs, HelpInfo(helpMsg, optHelpPage)) =>
+                (helpMsg, optHelpPage, matchLogs.map(log => (logColor(log), formatLog(log))))
+            }
+            Ok(views.html.analyzer.result(resultToShow))
+        }
+      }.getOrElse(Ok(views.html.analyzer.failure(s"分析失败：未上传日志")))
     }
 
     dataToAnalyze.bindFromRequest.fold(errorFunction, successFunction)
+  }
+
+  def analyzeLog(platformString: String, versionString: String, problemCode: Int, log: File): Try[AnalyzeResult] = {
+    val tryPlatform = platformString match {
+      case "android" => Success(PlatformAndroid)
+      case "ios" => Success(PlatformIOS)
+      case "pc" => Success(PlatformPC)
+      case "osx" => Success(PlatformOSX)
+      case "web" => Success(PlatformWeb)
+      case _ => Failure(UnknownPlatformException(platformString))
+    }
+    for {
+      platform <- tryPlatform
+      analyzer <- analyzerLoader.loadAnalyzer(ILiveSdk, platform, versionString)
+      content <- Try { Source.fromFile(log).mkString }
+      logItems <- logParser.parseLogString(content)
+      res <- analyzer.analyzeLogs(problemCode)(logItems)
+    } yield res
   }
 }
 
@@ -122,9 +121,10 @@ object AnalyzerController {
     case UnknownLog(originalLog) => originalLog
   }
 
-  private val levelColorMap: Map[LogLevel, String] = Map(LvError -> "red", LvWarn -> "yellow", LvInfo -> "green")
+  private val levelColorMap: Map[LogLevel, String] =
+    Map(LvError -> "red", LvWarn -> "orange", LvInfo -> "green", LvDebug -> "black")
 
-  val defaultColor: String = "black"
+  val defaultColor: String = "#666666"
 
   def logColor(log: LogItem): String = log match {
     case log: LegalLog => levelColorMap.getOrElse(log.level, defaultColor)

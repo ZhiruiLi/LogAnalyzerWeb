@@ -1,4 +1,4 @@
-@(userForm: Form[DataToAnalyze])(implicit request: RequestHeader, messagesProvider: MessagesProvider)
+@(dataForm: Form[DataToAnalyze])(implicit request: RequestHeader, messagesProvider: MessagesProvider)
 
 @import helper._
 
@@ -9,7 +9,7 @@
         @CSRF.formField
 
         @helper.select(
-            field = userForm("platform"),
+            field = dataForm("platform"),
             options = Seq(
                 "android" -> "Android",
                 "ios" -> "iOS",
@@ -20,10 +20,10 @@
             '_label -> "运行平台", '_showConstraints -> false
         )
 
-        @helper.inputText(userForm("version"), '_label -> "SDK 版本", 'placeholder -> "版本号", '_showConstraints -> false)
+        @helper.inputText(dataForm("version"), '_label -> "SDK 版本", 'placeholder -> "版本号", '_showConstraints -> false)
 
         @helper.select(
-            field = userForm("problem"),
+            field = dataForm("problem"),
             options = Seq(
                 "1" -> "没有画面",
                 "2" -> "无法接受离线消息",
