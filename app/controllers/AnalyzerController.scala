@@ -8,8 +8,10 @@ import javax.inject.Inject
 import com.example.zhiruili.loganalyzer._
 import com.example.zhiruili.loganalyzer.analyzer.LogAnalyzer.{AnalyzeResult, NoSuchProblemException}
 import com.example.zhiruili.loganalyzer.analyzer.config.AnalyzerConfig.HelpInfo
-import com.example.zhiruili.loganalyzer.analyzer.{LogAnalyzerLoader, SimpleLogAnalyzerLoader}
+import com.example.zhiruili.loganalyzer.analyzer.config.{ConfigLoader, FileConfigLoader, DefaultConfigParser}
+import com.example.zhiruili.loganalyzer.analyzer.LogAnalyzerLoader
 import com.example.zhiruili.loganalyzer.logs._
+import com.example.zhiruili.loganalyzer.rules.{BasicRuleParser, FileRuleLoader, RuleLoader}
 import controllers.AnalyzerController._
 import models.DataToAnalyze
 import play.api.data.Form
@@ -86,7 +88,11 @@ class AnalyzerController @Inject()(cc: ControllerComponents) extends AbstractCon
 
 object AnalyzerController {
 
-  val analyzerLoader: LogAnalyzerLoader = SimpleLogAnalyzerLoader("/Users/zhiruili/Projects/temp/AnalyzerBase", "_init_.json")
+  val baseDirPath = "/Users/zhiruili/Projects/temp/AnalyzerBase"
+  val configLoader: ConfigLoader = FileConfigLoader.createSimpleLoader(baseDirPath, "_init_.json", DefaultConfigParser)
+  val ruleLoader: RuleLoader = FileRuleLoader.createSimpleLoader(baseDirPath, BasicRuleParser)
+
+  val analyzerLoader: LogAnalyzerLoader = LogAnalyzerLoader(configLoader, ruleLoader)
 
   val logParser: LogParser = LogParser
 
