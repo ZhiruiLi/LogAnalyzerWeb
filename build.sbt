@@ -1,4 +1,4 @@
-name := """log-analyzer-web"""
+name := """LogAnalyzerWeb"""
 organization := "com.example"
 
 version := "1.0-SNAPSHOT"

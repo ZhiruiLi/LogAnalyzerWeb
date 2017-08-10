@@ -8,12 +8,13 @@ import javax.inject.Inject
 import com.example.zhiruili.loganalyzer._
 import com.example.zhiruili.loganalyzer.analyzer.LogAnalyzer.{AnalyzeResult, NoSuchProblemException}
 import com.example.zhiruili.loganalyzer.analyzer.config.AnalyzerConfig.HelpInfo
-import com.example.zhiruili.loganalyzer.analyzer.config.{ConfigLoader, FileConfigLoader, DefaultConfigParser}
+import com.example.zhiruili.loganalyzer.analyzer.config.{ConfigLoader, DefaultConfigParser, FileConfigLoader}
 import com.example.zhiruili.loganalyzer.analyzer.LogAnalyzerLoader
 import com.example.zhiruili.loganalyzer.logs._
 import com.example.zhiruili.loganalyzer.rules.{BasicRuleParser, FileRuleLoader, RuleLoader}
 import controllers.AnalyzerController._
 import models.DataToAnalyze
+import play.api.Configuration
 import play.api.data.Form
 import play.api.data.Forms._
 import play.api.data.validation.Constraints
@@ -23,7 +24,14 @@ import play.api.mvc.{AbstractController, ControllerComponents}
 import scala.io.Source
 import scala.util.{Failure, Success, Try}
 
-class AnalyzerController @Inject()(cc: ControllerComponents) extends AbstractController(cc) with I18nSupport {
+class AnalyzerController @Inject()(cc: ControllerComponents, configuration: Configuration) extends AbstractController(cc) with I18nSupport {
+
+  val baseDirPath: String = configuration.get[String]("baseDirPath")
+  val configFileName: String = configuration.get[String]("configFileName")
+  val configLoader: ConfigLoader = FileConfigLoader.createSimpleLoader(baseDirPath, configFileName, DefaultConfigParser)
+  val ruleLoader: RuleLoader = FileRuleLoader.createSimpleLoader(baseDirPath, BasicRuleParser)
+  val analyzerLoader: LogAnalyzerLoader = LogAnalyzerLoader(configLoader, ruleLoader)
+  val logParser: LogParser = LogParser
 
   val dataToAnalyze = Form(
     mapping(
@@ -87,14 +95,6 @@ class AnalyzerController @Inject()(cc: ControllerComponents) extends AbstractCon
 }
 
 object AnalyzerController {
-
-  val baseDirPath = "/Users/zhiruili/Projects/temp/AnalyzerBase"
-  val configLoader: ConfigLoader = FileConfigLoader.createSimpleLoader(baseDirPath, "_init_.json", DefaultConfigParser)
-  val ruleLoader: RuleLoader = FileRuleLoader.createSimpleLoader(baseDirPath, BasicRuleParser)
-
-  val analyzerLoader: LogAnalyzerLoader = LogAnalyzerLoader(configLoader, ruleLoader)
-
-  val logParser: LogParser = LogParser
 
   case class UnknownPlatformException(platformName: String) extends RuntimeException(s"Unknown platform: $platformName")
 
