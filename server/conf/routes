@@ -3,4 +3,7 @@ GET     /                           controllers.HomeController.index
 GET     /analyzer                   controllers.AnalyzerController.createForm
 POST    /analyzer                   controllers.AnalyzerController.submit
 
-GET     /assets/*file               controllers.Assets.versioned(path="/public", file: Asset)
+GET     /js                         controllers.HomeController.testjs
+
+GET     /assets/*file               controllers.Assets.at(file)
+GET     /versionedAssets/*file      controllers.Assets.versioned(file)

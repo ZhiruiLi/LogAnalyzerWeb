@@ -1,23 +1,32 @@
 logs
+project/project
+project/target
 target
-/.idea
-/.idea_modules
-/.classpath
-/.project
-/.settings
-/RUNNING_PID
+tmp
+.history
+dist
+.idea
 *.iml
+/out
+.idea_modules
+.classpath
+.project
+/RUNNING_PID
+.settings
+.DS_Store
 
-# Ignore Play! working directory #
-bin/
-/db
-.eclipse
-/lib/
-/modules
-/project/project
-tmp/
-test-result
-server.pid
-*.eml
-/dist/
+# hidden cross project folders
+shared/.js
+shared/.jvm
+
+# temp files
+.~*
+*~
+*.orig
+
+# eclipse
+.scala_dependencies
+.buildpath
 .cache
+.target
+bin/
