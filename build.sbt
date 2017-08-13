@@ -23,8 +23,11 @@ lazy val client = (project in file("client")).settings(
   scalaVersion := scalaV,
   scalaJSUseMainModuleInitializer := true,
   libraryDependencies ++= Seq(
-    "org.scala-js" %%% "scalajs-dom" % "0.9.1"
-  )
+    "org.scala-js" %%% "scalajs-dom" % "0.9.1",
+    "com.thoughtworks.binding" %%% "dom" % "latest.release",
+    "com.github.karasiq" %%% "scalajs-bootstrap" % "2.0.0"
+  ),
+  addCompilerPlugin("org.scalamacros" % "paradise" % "2.1.0" cross CrossVersion.full)
 ).enablePlugins(ScalaJSPlugin, ScalaJSWeb).
   dependsOn(sharedJs)
 

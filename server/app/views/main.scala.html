@@ -8,16 +8,13 @@
           href='@routes.Assets.versioned("stylesheets/bootstrap.min.css")'>
     <link rel="stylesheet" media="screen"
           href='@routes.Assets.versioned("stylesheets/main.css")'>
+    @scalajs.html.scripts("client", routes.Assets.versioned(_).toString, name => getClass.getResource(s"/public/$name") != null)
 </head>
 <body>
 <div class="screenshot">
-    <div class="navbar navbar-fixed-top">
-        <div class="navbar-inner">
-            <div class="container">
-                <a class="brand" href="@routes.HomeController.index()">日志分析器 | @title</a>
-            </div>
-        </div>
-    </div>
+    <div class="navbar navbar-fixed-top"><div class="navbar-inner"><div class="container">
+        <a class="brand" href="@routes.HomeController.index()">日志分析器 | @title</a>
+    </div></div></div>
     <div class="container">
         @content
     </div>

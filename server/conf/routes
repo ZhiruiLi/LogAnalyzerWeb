@@ -3,7 +3,7 @@ GET     /                           controllers.HomeController.index
 GET     /analyzer                   controllers.AnalyzerController.createForm
 POST    /analyzer                   controllers.AnalyzerController.submit
 
-GET     /js                         controllers.HomeController.testjs
+GET     /editrule                   controllers.HomeController.editRule
 
 GET     /assets/*file               controllers.Assets.at(file)
 GET     /versionedAssets/*file      controllers.Assets.versioned(file)

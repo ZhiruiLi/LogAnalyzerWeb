@@ -10,7 +10,7 @@ body, p, label { font-size:15px; }
     color:white; font-weight:bold; }
 
 /* Set the width to result in a suitable resolution at 127mm wide. */
-div.screenshot { width: 800px; margin:20px; background-color:#D0E7EF; MARGIN-RIGHT: auto; MARGIN-LEFT: auto; }
+div.screenshot { width: 800px; margin:20px; background-color:#D0E7EF; margin-left:auto; margin-right:auto; }
 .navbar-fixed-top .navbar-inner { padding-left:20px; }
 .navbar .nav > li > a { color:#bbb; }
 
@@ -38,3 +38,9 @@ footer { clear: both; text-align: right; }
 dl.products { margin-top: 0; }
 dt { clear: right; }
 .barcode { float:right; margin-bottom: 10px; border: 4px solid white; }
+
+.my-input-xsmall { width: 15px; }
+.my-input-small { width: 30px; }
+.my-input-middle { width: 60px; }
+.my-input-big { width: 120px; }
+.my-btn { min-width: 30px; vertical-align: top; }
