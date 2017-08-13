@@ -1,5 +1,6 @@
 package com.example.zhiruili.js
 
+import com.example.zhiruili.js.RuleModels.Tags
 import com.thoughtworks.binding.Binding.{Var, Vars}
 import com.thoughtworks.binding.{Binding, dom}
 import org.scalajs.dom.html.{Input, Select}
@@ -7,8 +8,6 @@ import org.scalajs.dom._
 import org.scalajs.dom.raw.HTMLElement
 import org.scalajs.dom.Event
 
-import scala.scalajs.js
-import scala.scalajs.js.JSON
 import scala.scalajs.js.annotation.{JSExportAll, JSExportTopLevel}
 import scala.util.Try
 
@@ -18,25 +17,70 @@ object RuleEditor {
 
 //  implicit def makeIntellijHappy(x: scala.xml.Node): Binding[HTMLElement] = ???
 
+  object BindingRules {
+    sealed trait Rule {
+      val tag: String
+    }
+    case class NamedRule(name: Var[String]) extends Rule {
+      val tag: String = Tags.namedRule
+    }
+    case class AppearRule(rule: Var[Rule], times: Var[Int]) extends Rule {
+      val tag: String = Tags.appearRule
+    }
+    case class SingleRuleRule(tag: String, rule: Var[Rule]) extends Rule
+    case class RulesListRule(tag: String, rules: Vars[Var[Rule]]) extends Rule
+    case class MatchRule(comment: Var[String],
+                         level: Var[Option[String]],
+                         keyTag: Var[Option[String]],
+                         position: Var[Option[String]],
+                         message: Var[Option[String]],
+                         extra: Vars[(String, String)]) extends Rule {
+      val tag: String = Tags.matchRule
+    }
+  }
+
+  implicit def asBindingRule(rule: RuleModels.Rule): BindingRuleConverter = BindingRuleConverter(rule)
+
+  case class BindingRuleConverter(rule: RuleModels.Rule) {
+    def toBinding: Var[BindingRules.Rule] = Var(rule match {
+      case RuleModels.NamedRule(name) =>
+        BindingRules.NamedRule(Var(name))
+      case RuleModels.MatchRule(comment, level, keyTag, pos, msg, ext) =>
+        BindingRules.MatchRule(Var(comment), Var(level), Var(keyTag), Var(pos), Var(msg), Vars(ext: _*))
+      case RuleModels.AppearRule(rule, times) =>
+        BindingRules.AppearRule(rule.toBinding, Var(times))
+      case RuleModels.SingleRuleRule(tag, rule) =>
+        BindingRules.SingleRuleRule(tag, rule.toBinding)
+      case RuleModels.RulesListRule(tag, rules) =>
+        BindingRules.RulesListRule(tag, Vars(rules.map(_.toBinding): _*))
+    })
+  }
+
+  implicit def asStableRule(rule: Var[BindingRules.Rule]): StableRuleConverter = StableRuleConverter(rule)
+
+  case class StableRuleConverter(rule: Var[BindingRules.Rule]) {
+    def toStable: RuleModels.Rule = rule.value match {
+      case BindingRules.NamedRule(nameVar) =>
+        RuleModels.NamedRule(nameVar.value)
+      case BindingRules.MatchRule(comVar, lvVar, tagVar, posVar, msgVar, extVar) =>
+        RuleModels.MatchRule(comVar.value, lvVar.value, tagVar.value, posVar.value, msgVar.value, extVar.value.toList)
+      case BindingRules.AppearRule(ruleVar, timesVar) =>
+        RuleModels.AppearRule(ruleVar.toStable, timesVar.value)
+      case BindingRules.SingleRuleRule(tag, ruleVar) =>
+        RuleModels.SingleRuleRule(tag, ruleVar.toStable)
+      case BindingRules.RulesListRule(tag, rulesVars) =>
+        RuleModels.RulesListRule(tag, rulesVars.value.toList.map(_.toStable))
+    }
+  }
+
+  import BindingRules._
+
   def editRule(): Unit = {
     startNewEdit(document.getElementById("mainCanvas"))
   }
 
   def startNewEdit(element: Element): Unit = {
-    val root = Var[Rule](NamedRule(Var("")))
-    dom.render(element, renderRoot(root))
-  }
-
-  object Tags {
-    val namedRule = "named_rule"
-    val matchRule = "match"
-    val appearRule = "appear"
-    val noAppearRule = "no_appear"
-    val orRule = "or"
-    val andRule = "and"
-    val notRule = "not"
-    val seqRule = "sequence"
-    val ordRule = "ordered"
+    dom.render(element, renderRoot(Var(NamedRule(Var("")))))
   }
 
   object Labels {
@@ -53,44 +97,21 @@ object RuleEditor {
 
   def genRuleByTag(tag: String): Rule = {
     if (tag == Tags.namedRule) NamedRule(Var(""))
-    else if(tag == Tags.matchRule) MatchRule(Var(""), Var(None), Var(None), Var(None), Var(None), Vars.empty)
+    else if(tag == Tags.matchRule) MatchRule(Var("未命名"), Var(None), Var(None), Var(None), Var(None), Vars.empty)
     else if (tag == Tags.appearRule) AppearRule(Var(NamedRule(Var(""))), Var(1))
     else if (tag == Tags.noAppearRule || tag == Tags.notRule) SingleRuleRule(tag, Var(NamedRule(Var(""))))
     else RulesListRule(tag, Vars.empty)
-  }
-
-  sealed trait Rule {
-    val tag: String
-  }
-  case class NamedRule(name: Var[String]) extends Rule {
-    val tag: String = Tags.namedRule
-  }
-  case class AppearRule(rule: Var[Rule], times: Var[Int]) extends Rule {
-    val tag: String = Tags.appearRule
-  }
-  case class SingleRuleRule(tag: String, rule: Var[Rule]) extends Rule
-  case class RulesListRule(tag: String, rules: Vars[Var[Rule]]) extends Rule
-  case class MatchRule(comment: Var[String],
-                       level: Var[Option[String]],
-                       keyTag: Var[Option[String]],
-                       position: Var[Option[String]],
-                       message: Var[Option[String]],
-                       extra: Vars[(String, String)]) extends Rule {
-    val tag: String = Tags.matchRule
   }
 
   @dom
   def renderRoot(rootRule: Var[Rule]): Binding[HTMLElement] = {
     val convertStr = Var("")
     <div>
+      <div>{ renderSelect(rootRule).bind }</div>
       <div>
-        { renderSelect(rootRule).bind }
-      </div>
-      <div>
-        <button class="btn my-btn" onclick={ e: Event =>
-          val json = ruleToJson(rootRule.value)
-          convertStr.value = JSON.stringify(json, space=2)
-        }>生成 JSON 字符串</button>
+        <button class="btn my-btn" onclick={ _: Event =>
+          convertStr.value = RuleFormatter.formatJsonString(rootRule.toStable, 2)
+        }>预览配置文件</button>
         <pre>{ convertStr.bind } </pre>
       </div>
     </div>
@@ -102,38 +123,6 @@ object RuleEditor {
       vars.value -= variable
     }
     <button class="btn my-btn" onclick={ onDelClickHandler }>x</button>
-  }
-
-  def emptyJObject: js.Dynamic = JSON.parse("{}")
-
-  def createJObject(kvs: List[(String, js.Any)]): js.Dynamic = {
-    val json = emptyJObject
-    kvs.foreach { case (k, v) => json.updateDynamic(k)(v) }
-    json
-  }
-
-  def ruleToJson(rule: Rule): js.Dynamic = {
-    rule match {
-      case NamedRule(name) =>
-        JSON.parse(s""""${ name.value }"""")
-      case AppearRule(subRule, times) =>
-        createJObject(List("type" -> "appear", "times" -> times.value, "rule" -> ruleToJson(subRule.value)))
-      case SingleRuleRule(tag, subRule) =>
-        createJObject(List("type" -> tag, "rule" -> ruleToJson(subRule.value)))
-      case RulesListRule(tag, subRules) =>
-        val jArray = js.Array[js.Dynamic](subRules.value.map(_.value).map(ruleToJson).toList: _*)
-        createJObject(List("type" -> tag, "rules" -> jArray))
-      case MatchRule(comment, optLv, optKey, optPos, optMsg, ext) =>
-        val json = createJObject(List("type" -> "match"))
-        if(!comment.value.isEmpty) json.comment = comment.value
-        optLv.value.foreach(lv => json.level = lv)
-        optKey.value.foreach(tag => json.tag = tag)
-        optPos.value.foreach(pos => json.position = pos)
-        optMsg.value.foreach(msg => json.message = msg)
-        def mapToJsVal(kv: (String, String)): (String, js.Any) = (kv._1, kv._2)
-        if(ext.value.nonEmpty) json.extra = createJObject(ext.value.toList.map(mapToJsVal))
-        json
-    }
   }
 
   @dom
@@ -168,18 +157,30 @@ object RuleEditor {
           rule.value = newRuleVal
       }
     }
-    val currTag = rule.value.tag
+    val onWrap = { _: Event =>
+      rule.value = AppearRule(Var(rule.value), Var(1))
+    }
+    val onUnwrap = { _: Event =>
+      rule.value match {
+        case AppearRule(subRule, _) => rule.value = subRule.value
+        case SingleRuleRule(_, subRule) => rule.value = subRule.value
+        case RulesListRule(_, subRules) => subRules.value.headOption.foreach(r => rule.value = r.value)
+        case _ => // ignore
+      }
+    }
     <span>
+      <button class="btn my-btn" onclick={ onWrap }>+</button>
+      <button class="btn my-btn" onclick={ onUnwrap }>-</button>
       <select onchange={ onChange } class="my-input-big">
-        { renderSelectItem(Tags.namedRule, Labels.namedRule, currTag).bind }
-        { renderSelectItem(Tags.matchRule, Labels.matchRule, currTag).bind }
-        { renderSelectItem(Tags.appearRule, Labels.appearRule, currTag).bind }
-        { renderSelectItem(Tags.noAppearRule, Labels.noAppearRule, currTag).bind }
-        { renderSelectItem(Tags.orRule, Labels.orRule, currTag).bind }
-        { renderSelectItem(Tags.andRule, Labels.andRule, currTag).bind }
-        { renderSelectItem(Tags.notRule, Labels.notRule, currTag).bind }
-        { renderSelectItem(Tags.seqRule, Labels.seqRule, currTag).bind }
-        { renderSelectItem(Tags.ordRule, Labels.ordRule, currTag).bind }
+        { renderSelectItem(Tags.namedRule, Labels.namedRule, rule.bind.tag).bind }
+        { renderSelectItem(Tags.matchRule, Labels.matchRule, rule.bind.tag).bind }
+        { renderSelectItem(Tags.appearRule, Labels.appearRule, rule.bind.tag).bind }
+        { renderSelectItem(Tags.noAppearRule, Labels.noAppearRule, rule.bind.tag).bind }
+        { renderSelectItem(Tags.anyRule, Labels.orRule, rule.bind.tag).bind }
+        { renderSelectItem(Tags.allRule, Labels.andRule, rule.bind.tag).bind }
+        { renderSelectItem(Tags.notRule, Labels.notRule, rule.bind.tag).bind }
+        { renderSelectItem(Tags.seqRule, Labels.seqRule, rule.bind.tag).bind }
+        { renderSelectItem(Tags.ordRule, Labels.ordRule, rule.bind.tag).bind }
       </select>
       { renderRule(rule.bind).bind }
     </span>
@@ -253,7 +254,7 @@ object RuleEditor {
       {
         for(pair <- vars) yield
         <span>
-          <button class="btn my-btn" onclick={ e: Event => vars.value -= pair }>{pair._1} : {pair._2} | x</button>
+          <button class="btn my-btn" onclick={ _: Event => vars.value -= pair }>{pair._1} : {pair._2} | x</button>
         </span>
       }
       |
@@ -261,7 +262,7 @@ object RuleEditor {
         键:{ renderInput(key, "my-input-small").bind }
         值:{ renderInput(value, "my-input-small").bind }
         <button class="btn my-btn"
-                onclick={ e: Event => {
+                onclick={ _: Event => {
                   if (key.value.trim.nonEmpty) {
                     vars.value += (key.value.trim -> value.value.trim)
                     key.value = ""
@@ -277,13 +278,6 @@ object RuleEditor {
   @dom
   def renderMatchRule(rule: MatchRule): Binding[HTMLElement] = {
     val showDetail = Var(false)
-    val enableLv = Var(false)
-    def onChangeHandler(boolVar: Var[Boolean]) = { event: Event =>
-      event.currentTarget match {
-        case input: Input => boolVar.value = input.checked
-        case _ => // ignore
-      }
-    }
     val onClick = { _: Event => showDetail.value = !showDetail.value }
     <span>
       <button class="btn my-btn" onclick={ onClick }>{ rule.comment.bind } | { if (showDetail.bind) "收起" else "展开" }</button>
