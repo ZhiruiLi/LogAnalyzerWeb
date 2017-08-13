@@ -1,11 +1,11 @@
 package com.example.zhiruili.js
 
-import com.thoughtworks.binding.Binding.{Constants, Var, Vars}
+import com.thoughtworks.binding.Binding.{Var, Vars}
 import com.thoughtworks.binding.{Binding, dom}
 import org.scalajs.dom.html.{Input, Select}
 import org.scalajs.dom._
 import org.scalajs.dom.raw.HTMLElement
-import org.scalajs.dom.{Event, Node}
+import org.scalajs.dom.Event
 
 import scala.scalajs.js
 import scala.scalajs.js.JSON
@@ -16,7 +16,7 @@ import scala.util.Try
 @JSExportAll
 object RuleEditor {
 
-//  implicit def makeIntellijHappy(x: scala.xml.Node): Binding[org.scalajs.dom.raw.Node] = ???
+//  implicit def makeIntellijHappy(x: scala.xml.Node): Binding[HTMLElement] = ???
 
   def editRule(): Unit = {
     startNewEdit(document.getElementById("mainCanvas"))
@@ -51,7 +51,7 @@ object RuleEditor {
     val ordRule = "松散连续出现"
   }
 
-  def getDefaultRuleByTag(tag: String): Rule = {
+  def genRuleByTag(tag: String): Rule = {
     if (tag == Tags.namedRule) NamedRule(Var(""))
     else if(tag == Tags.matchRule) MatchRule(Var(""), Var(None), Var(None), Var(None), Var(None), Vars.empty)
     else if (tag == Tags.appearRule) AppearRule(Var(NamedRule(Var(""))), Var(1))
@@ -145,7 +145,27 @@ object RuleEditor {
   def renderSelect(rule: Var[Rule]): Binding[HTMLElement] = {
     val onChange = { event: Event =>
       event.currentTarget match {
-        case sel: Select => rule.value = getDefaultRuleByTag(sel.value)
+        case sel: Select =>
+          val newRuleVal = (rule.value, genRuleByTag(sel.value)) match {
+            case (oldRule: RulesListRule, newRule: RulesListRule) =>
+              newRule.copy(rules = oldRule.rules)
+            case (oldRule: SingleRuleRule, newRule: SingleRuleRule) =>
+              newRule.copy(rule = oldRule.rule)
+            case (oldRule: RulesListRule, newRule: SingleRuleRule) =>
+              oldRule.rules.value.headOption.map(r => newRule.copy(rule = r)).getOrElse(newRule)
+            case (oldRule: SingleRuleRule, newRule: RulesListRule) =>
+              newRule.copy(rules = Vars(oldRule.rule))
+            case (oldRule: SingleRuleRule, newRule: AppearRule) =>
+              newRule.copy(rule = oldRule.rule)
+            case (oldRule: AppearRule, newRule: SingleRuleRule) =>
+              newRule.copy(rule = oldRule.rule)
+            case (oldRule: RulesListRule, newRule: AppearRule) =>
+              oldRule.rules.value.headOption.map(r => newRule.copy(rule = r)).getOrElse(newRule)
+            case (oldRule: AppearRule, newRule: RulesListRule) =>
+              newRule.copy(rules = Vars(oldRule.rule))
+            case (_, newRule) => newRule
+          }
+          rule.value = newRuleVal
       }
     }
     val currTag = rule.value.tag
@@ -238,8 +258,8 @@ object RuleEditor {
       }
       |
       <span>
-        key:{ renderInput(key, "my-input-small").bind }
-        val:{ renderInput(value, "my-input-small").bind }
+        键:{ renderInput(key, "my-input-small").bind }
+        值:{ renderInput(value, "my-input-small").bind }
         <button class="btn my-btn"
                 onclick={ e: Event => {
                   if (key.value.trim.nonEmpty) {
@@ -272,7 +292,7 @@ object RuleEditor {
           <span>
             <span>
               备忘名:
-              { renderInput(rule.comment, "my-input-middle").bind }
+              { renderInput(rule.comment, "my-input-big").bind }
             </span>
             { renderCheckableInput("日志等级:", rule.level, "my-input-xsmall").bind }
             { renderCheckableInput("标签:", rule.keyTag, "my-input-small").bind }
@@ -313,7 +333,7 @@ object RuleEditor {
   @dom
   def renderRuleListRule(rule: RulesListRule): Binding[HTMLElement] = {
     val onAdd = { _: Event =>
-      rule.rules.value += Var(getDefaultRuleByTag(Tags.namedRule))
+      rule.rules.value += Var(genRuleByTag(Tags.namedRule))
     }
     <span>
       <ul>
