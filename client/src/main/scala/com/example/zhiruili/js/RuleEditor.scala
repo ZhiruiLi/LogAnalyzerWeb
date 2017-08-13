@@ -219,8 +219,8 @@ object RuleEditor {
       }
     }
     <span>
-      { label }
       <input type="checkbox" checked={ text.bind.isDefined } onchange={ onCheck } />
+      { label }
       <input type="text" class={ sizeClass } disabled={ text.bind.isEmpty } onchange={ onInput } />
     </span>
   }
@@ -232,21 +232,25 @@ object RuleEditor {
     <span>
       {
         for(pair <- vars) yield
+        <span>
           <button class="btn my-btn" onclick={ e: Event => vars.value -= pair }>{pair._1} : {pair._2} | x</button>
+        </span>
       }
       |
-      key:{ renderInput(key, "my-input-small").bind }
-      val:{ renderInput(value, "my-input-small").bind }
-      <button class="btn my-btn"
-              onclick={ e: Event => {
-                if (key.value.trim.nonEmpty) {
-                  vars.value += (key.value.trim -> value.value.trim)
-                  key.value = ""
-                  value.value = ""
-                }
-              } }
-      >+
-      </button>
+      <span>
+        key:{ renderInput(key, "my-input-small").bind }
+        val:{ renderInput(value, "my-input-small").bind }
+        <button class="btn my-btn"
+                onclick={ e: Event => {
+                  if (key.value.trim.nonEmpty) {
+                    vars.value += (key.value.trim -> value.value.trim)
+                    key.value = ""
+                    value.value = ""
+                  }
+                } }
+        >+
+        </button>
+      </span>
     </span>
   }
 
@@ -267,15 +271,15 @@ object RuleEditor {
         if (showDetail.bind) {
           <span>
             <span>
-              备忘名
+              备忘名:
               { renderInput(rule.comment, "my-input-middle").bind }
             </span>
-            { renderCheckableInput("level", rule.level, "my-input-xsmall").bind }
-            { renderCheckableInput("tag", rule.keyTag, "my-input-small").bind }
-            { renderCheckableInput("pos", rule.position, "my-input-big").bind }
-            { renderCheckableInput("msg", rule.message, "my-input-big").bind }
+            { renderCheckableInput("日志等级:", rule.level, "my-input-xsmall").bind }
+            { renderCheckableInput("标签:", rule.keyTag, "my-input-small").bind }
+            { renderCheckableInput("打印位置:", rule.position, "my-input-big").bind }
+            { renderCheckableInput("日志信息:", rule.message, "my-input-big").bind }
             <span>
-              ext
+              附加信息:
               { renderInputBindings(rule.extra).bind }
             </span>
           </span>
