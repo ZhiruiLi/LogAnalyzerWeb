@@ -93,7 +93,7 @@ object RuleEditor {
 
   def genRuleByTag(tag: String): Rule = {
     if (tag == Tags.namedRule) NamedRule(Var(""))
-    else if(tag == Tags.matchRule) MatchRule(Var("未命名"), Var(None), Var(None), Var(None), Var(None), Vars.empty)
+    else if(tag == Tags.matchRule) MatchRule(Var(""), Var(None), Var(None), Var(None), Var(None), Vars.empty)
     else if (tag == Tags.appearRule) AppearRule(Var(NamedRule(Var(""))), Var(1))
     else if (tag == Tags.noAppearRule || tag == Tags.notRule) SingleRuleRule(tag, Var(NamedRule(Var(""))))
     else RulesListRule(tag, Vars.empty)
@@ -218,7 +218,7 @@ object RuleEditor {
 
   @dom
   def renderCheckableInput(label: String, text: Var[Option[String]], sizeClass: String): Binding[HTMLElement] = {
-    var content = ""
+    var content = text.value.getOrElse("")
     val onCheck = { event: Event =>
       event.currentTarget match {
         case input: Input =>
@@ -238,7 +238,7 @@ object RuleEditor {
     <span>
       <input type="checkbox" checked={ text.bind.isDefined } onchange={ onCheck } />
       { label }
-      <input type="text" class={ sizeClass } disabled={ text.bind.isEmpty } onchange={ onInput } />
+      <input type="text" class={ sizeClass } disabled={ text.bind.isEmpty } onchange={ onInput } value={ content } />
     </span>
   }
 
@@ -276,7 +276,9 @@ object RuleEditor {
     val showDetail = Var(false)
     val onClick = { _: Event => showDetail.value = !showDetail.value }
     <span>
-      <button class="btn my-btn" onclick={ onClick }>{ rule.comment.bind } | { if (showDetail.bind) "收起" else "展开" }</button>
+      <button class="btn my-btn" onclick={ onClick }>
+        { if (rule.comment.bind.trim.nonEmpty) rule.comment.bind else "未命名" } | { if (showDetail.bind) "收起" else "展开" }
+      </button>
       {
         if (showDetail.bind) {
           <span>
