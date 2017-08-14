@@ -75,10 +75,6 @@ object RuleEditor {
 
   import BindingRules._
 
-  def editRule(): Unit = {
-    startNewEdit(document.getElementById("mainCanvas"))
-  }
-
   def startNewEdit(element: Element): Unit = {
     dom.render(element, renderRoot(Var(NamedRule(Var("")))))
   }
