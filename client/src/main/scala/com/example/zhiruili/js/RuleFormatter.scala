@@ -16,7 +16,7 @@ object RuleFormatter {
   def ruleToJson(rule: Rule): js.Any = {
     rule match {
       case NamedRule(name) =>
-        JSON.parse(s""""${ name }"""")
+        name
       case AppearRule(subRule, times) =>
         createJObject(List("type" -> "appear", "times" -> times, "rule" -> ruleToJson(subRule)))
       case SingleRuleRule(tag, subRule) =>
