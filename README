@@ -1,0 +1,34 @@
+# 日志分析器网页端
+
+需要将该工程与 LogAnalyzer 放在同一目录下才可运行，例如：
+
+```bash
+cd ~
+git clone https://github.com/ZhiruiLi/LogAnalyzer
+git clone https://github.com/ZhiruiLi/LogAnalyzerWeb
+cd LogAnalyzerWeb
+sbt run
+```
+
+如果需要，记得加代理：
+
+```bash
+sbt -Dhttps.proxyHost=dev-proxy.oa.com -Dhttps.proxyPort=8080 run
+```
+
+在 `LogAnalyzerWeb/server/conf/application.conf` 里有 `baseDirPath` 一项，将其配置为配置文件所在的根目录，目录结构为：
+
+
+```
+- 配置文件根目录
+  - ilive                     <- SDK 名（目前支持 ilive）
+    - android                 <- 平台名
+      - 1.0.0                 <- 版本号（目前支持 1.0.0）
+        - _init_.json         <- 配置文件
+        - rule01.json         <- 名称为 rule01 的规则
+        - rule02.json         <- 名称为 rule02 的规则
+    - ios
+    - pc
+```
+
+访问 `localhost:9000` 查看页面
