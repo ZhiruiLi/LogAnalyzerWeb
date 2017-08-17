@@ -1,18 +1,16 @@
 package controllers
 
-import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Date
 import javax.inject.Inject
 
 import com.example.zhiruili.loganalyzer._
 import com.example.zhiruili.loganalyzer.analyzer.LogAnalyzer.{AnalyzeResult, NoSuchProblemException}
-import com.example.zhiruili.loganalyzer.analyzer.config.AnalyzerConfig.HelpInfo
 import com.example.zhiruili.loganalyzer.analyzer.config.{ConfigLoader, DefaultConfigParser, FileConfigLoader}
 import com.example.zhiruili.loganalyzer.analyzer.LogAnalyzerLoader
+import com.example.zhiruili.loganalyzer.comment.{CommentBindings, CommentLoader}
 import com.example.zhiruili.loganalyzer.logs._
 import com.example.zhiruili.loganalyzer.rules.{BasicRuleParser, FileRuleLoader, RuleLoader}
-import controllers.AnalyzerController._
 import models.DataToAnalyze
 import play.api.Configuration
 import play.api.data.Form
@@ -22,22 +20,34 @@ import play.api.i18n.I18nSupport
 import play.api.mvc.{AbstractController, ControllerComponents}
 
 import scala.io.Source
+import scala.util.matching.Regex
 import scala.util.{Failure, Success, Try}
 
 class AnalyzerController @Inject()(cc: ControllerComponents, configuration: Configuration) extends AbstractController(cc) with I18nSupport {
 
+  import controllers.AnalyzerController._
+
   val baseDirPath: String = configuration.get[String]("baseDirPath")
   val configFileName: String = configuration.get[String]("configFileName")
+  val genCommentFileName: String = configuration.get[String]("generalCommentFileName")
+  val errCommentFileName: String = configuration.get[String]("errorCommentFileName")
   val configLoader: ConfigLoader = FileConfigLoader.createSimpleLoader(baseDirPath, configFileName, DefaultConfigParser)
   val ruleLoader: RuleLoader = FileRuleLoader.createSimpleLoader(baseDirPath, BasicRuleParser)
   val analyzerLoader: LogAnalyzerLoader = LogAnalyzerLoader(configLoader, ruleLoader)
   val logParser: LogParser = LogParser
+  val commentLoader: CommentLoader = CommentLoader.ofFile(baseDirPath, errCommentFileName, genCommentFileName)
+  val currentSdk: Sdk = ILiveSdk
+
+  val dateTimePattern: Regex = """\s*\d{2}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2}\s*""".r
+  val dateTimeErrorMsg: String = "日期必须满足 yy-MM-dd HH:mm:ss 的格式"
 
   val dataToAnalyze = Form(
     mapping(
       "platform" -> text,
       "version" -> text.verifying(Constraints.pattern("""\s*\d+\.\d+\.\d+\s*""".r, "", "版本号必须满足 a.b.c 的格式")),
-      "problem" -> number
+      "problem" -> number,
+      "startTime" -> optional(text.verifying(Constraints.pattern(dateTimePattern, "", dateTimeErrorMsg))),
+      "endTime" -> optional(text.verifying(Constraints.pattern(dateTimePattern, "", dateTimeErrorMsg)))
     )(DataToAnalyze.apply)(DataToAnalyze.unapply))
 
   def createForm() = Action { implicit request =>
@@ -50,24 +60,29 @@ class AnalyzerController @Inject()(cc: ControllerComponents, configuration: Conf
       BadRequest(views.html.analyzer.form(formWithErrors))
     }
 
+    val dateTimeFormatter = new SimpleDateFormat("yy-MM-dd HH:mm:ss")
+
     val successFunction = { data: DataToAnalyze =>
+      val startTime = Try(data.start.get).flatMap(s => Try(dateTimeFormatter.parse(s).getTime)).getOrElse(0L)
+      val endTime = Try(data.end.get).flatMap(s => Try(dateTimeFormatter.parse(s).getTime)).getOrElse(Long.MaxValue)
       request.body.file("logfile").map { log =>
-        analyzeLog(data.platform, data.version.trim, data.problem, log.ref) match {
+        (for {
+          content <- Try { Source.fromFile(log.ref).mkString }
+          logItems <- logParser.parseLogString(content)
+          res <- analyzeLog(data.platform, data.version.trim, data.problem, Utils.timeFilter(startTime, endTime)(logItems))
+          commentBindings <- commentLoader.loadCommentBindings(currentSdk)
+        } yield (res, transformCommentBindings(commentBindings))) match {
           case Failure(UnknownPlatformException(platform)) =>
             Ok(views.html.analyzer.failure(s"找不到指定的平台：$platform"))
           case Failure(NoSuchProblemException(problem)) =>
             Ok(views.html.analyzer.failure(s"没有代号为 $problem 的问题"))
           case Failure(thw) =>
             Ok(views.html.analyzer.failure(s"发生内部错误：$thw"))
-          case Success(Nil) =>
-            val msg = List(("未能分析出相关问题", Some("https://www.qcloud.com/document/product/268/7752"), Nil))
-            Ok(views.html.analyzer.result(msg))
-          case Success(analyzeResult) =>
-            val resultToShow = analyzeResult.map {
-              case (matchLogs, HelpInfo(helpMsg, optHelpPage)) =>
-                (helpMsg, optHelpPage, matchLogs.map(log => (logColor(log), formatLog(log))))
-            }
-            Ok(views.html.analyzer.result(resultToShow))
+          case Success(((Nil, logItems), commentBindings)) =>
+            Ok(views.html.analyzer.result(Nil, logItems, commentBindings))
+          case Success(((analyzeResult, logItems), commentBindings))=>
+            val sharedResult = transformAnalyzeResult(analyzeResult)
+            Ok(views.html.analyzer.result(sharedResult, logItems, commentBindings))
         }
       }.getOrElse(Ok(views.html.analyzer.failure(s"分析失败：未上传日志")))
     }
@@ -75,7 +90,7 @@ class AnalyzerController @Inject()(cc: ControllerComponents, configuration: Conf
     dataToAnalyze.bindFromRequest.fold(errorFunction, successFunction)
   }
 
-  def analyzeLog(platformString: String, versionString: String, problemCode: Int, log: File): Try[AnalyzeResult] = {
+  def analyzeLog(platformString: String, versionString: String, problemCode: Int, logItems: List[LogItem]): Try[(AnalyzeResult, List[shared.LogItem])] = {
     val tryPlatform = platformString match {
       case "android" => Success(PlatformAndroid)
       case "ios" => Success(PlatformIOS)
@@ -87,10 +102,39 @@ class AnalyzerController @Inject()(cc: ControllerComponents, configuration: Conf
     for {
       platform <- tryPlatform
       analyzer <- analyzerLoader.loadAnalyzer(ILiveSdk, platform, versionString)
-      content <- Try { Source.fromFile(log).mkString }
-      logItems <- logParser.parseLogString(content)
       res <- analyzer.analyzeLogs(problemCode)(logItems)
-    } yield res
+    } yield (res, logItems.map(transformLogItem))
+  }
+
+  def transformLevel(lv: LogLevel): shared.LogLevel = lv match {
+    case LvDebug => shared.LvDebug
+    case LvInfo => shared.LvInfo
+    case LvWarn => shared.LvWarn
+    case LvError => shared.LvError
+    case _ => shared.LvUnknown
+  }
+
+  def transformLogItem(logItem: LogItem): shared.LogItem = logItem match {
+    case LegalLog(time, isKey, lv, pos, msg, ext) =>
+      shared.LegalLog(time.getTime, isKey, transformLevel(lv), pos, msg, ext)
+    case UnknownLog(log) => shared.UnknownLog(log)
+  }
+
+//  def transformAnalyzeResult(analyzeResult: AnalyzeResult): List[shared.AnalyzeResult] = {
+//    analyzeResult.map { case (logItems, helpInfo) =>
+//        shared.AnalyzeResult(logItems.map(transformLogItem), helpInfo.message, helpInfo.helpPage)
+//    }
+//  }
+
+  def transformAnalyzeResult(analyzeResult: AnalyzeResult): List[String] = {
+    analyzeResult.map { case (logItems, helpInfo) =>
+        shared.AnalyzeResult(logItems.map(transformLogItem), helpInfo.message, helpInfo.helpPage)
+    }
+  }
+
+
+  def transformCommentBindings(commentBindings: CommentBindings): shared.CommentBindings = {
+    shared.CommentBindings.ofMap(commentBindings.errorBindings.toMap, commentBindings.generalBindings.toMap)
   }
 }
 

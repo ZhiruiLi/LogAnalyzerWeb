@@ -1,6 +1,6 @@
 val scalaV = "2.12.2"
 
-lazy val analyzer = ProjectRef(file("../LogAnalyzer"), "loganalyzer")
+//lazy val analyzer = ProjectRef(file("../LogAnalyzer"), "loganalyzer")
 
 lazy val server = (project in file("server")).settings(
   scalaVersion := scalaV,
@@ -16,8 +16,8 @@ lazy val server = (project in file("server")).settings(
   ),
   // Compile the project before generating Eclipse files, so that generated .scala or .class files for views and routes are present
   EclipseKeys.preTasks := Seq(compile in Compile)
-).enablePlugins(PlayScala).
-  dependsOn(sharedJvm).dependsOn(analyzer)
+).enablePlugins(PlayScala).dependsOn(sharedJvm)
+//.dependsOn(analyzer)
 
 lazy val client = (project in file("client")).settings(
   scalaVersion := scalaV,
@@ -28,11 +28,17 @@ lazy val client = (project in file("client")).settings(
     "com.github.karasiq" %%% "scalajs-bootstrap" % "2.0.0"
   ),
   addCompilerPlugin("org.scalamacros" % "paradise" % "2.1.0" cross CrossVersion.full)
-).enablePlugins(ScalaJSPlugin, ScalaJSWeb).
-  dependsOn(sharedJs)
+).enablePlugins(ScalaJSPlugin, ScalaJSWeb)
+//  .dependsOn(sharedJs)
 
 lazy val shared = (crossProject.crossType(CrossType.Pure) in file("shared")).
-  settings(scalaVersion := scalaV).
+  settings(
+    scalaVersion := scalaV,
+    libraryDependencies ++= Seq(
+      "org.scala-lang.modules" %% "scala-parser-combinators" % "1.0.6",
+      "com.typesafe.play" % "play-json_2.12" % "2.6.1"
+    )
+  ).
   jsConfigure(_ enablePlugins ScalaJSWeb)
 
 lazy val sharedJvm = shared.jvm

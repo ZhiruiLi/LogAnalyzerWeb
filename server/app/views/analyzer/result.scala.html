@@ -1,18 +1,13 @@
-@(resList: List[(String, Option[String], List[(String, String)])])
+@(analyzeResults: JsArray, logItems: List[shared.LogItem], commentBindings: shared.CommentBindings)(implicit request: RequestHeader, messagesProvider: MessagesProvider)
 
 @main("分析结果") {
-    <ul>
-    @for((helpInfo, optHelpPage, colorLogItems) <- resList) {
-        <li>
-            <p class="lead">帮助信息：@helpInfo</p>
-            @for(helpPage <- optHelpPage) {
-                <p class="lead">更多帮助请参阅：<a href="@helpPage">@helpPage</a></p>
-            }
-            @if(!colorLogItems.isEmpty) {
-                <p class="lead">相关日志：</p>
-                <p><pre>@for((logColor, logItem) <- colorLogItems) {<font color="@logColor">@logItem</font><br/>}</pre></p>
-            }
-        </li>
-    }
-    </ul>
+    <div id="helpInfoContainer"></div>
+    <div id="logItemsContainer"></div>
+    <script>
+      ResultShower.renderResult(document.getElementById("helpInfoContainer"),
+                                document.getElementById("logItemsContainer"),
+                                @analyzeResults,
+                                logItems,
+                                commentBindings)
+    </script>
 }

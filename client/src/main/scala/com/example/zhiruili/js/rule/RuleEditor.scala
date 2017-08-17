@@ -1,12 +1,11 @@
-package com.example.zhiruili.js
+package com.example.zhiruili.js.rule
 
-import com.example.zhiruili.js.RuleModels.Tags
+import com.example.zhiruili.js.rule.RuleModels.Tags
 import com.thoughtworks.binding.Binding.{Var, Vars}
 import com.thoughtworks.binding.{Binding, dom}
+import org.scalajs.dom.{Event, _}
 import org.scalajs.dom.html.{Input, Select}
-import org.scalajs.dom._
 import org.scalajs.dom.raw.HTMLElement
-import org.scalajs.dom.Event
 
 import scala.scalajs.js.annotation.{JSExportAll, JSExportTopLevel}
 import scala.util.Try

@@ -1,6 +1,6 @@
-package com.example.zhiruili.js
+package com.example.zhiruili.js.rule
 
-import com.example.zhiruili.js.RuleModels._
+import com.example.zhiruili.js.rule.RuleModels._
 
 import scala.scalajs.js
 import scala.scalajs.js.JSON

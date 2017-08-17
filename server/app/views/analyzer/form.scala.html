@@ -40,6 +40,9 @@
             '_label -> "问题描述", '_showConstraints -> false
         )
 
+        @helper.inputText(dataForm("startTime"), '_label -> "日志最早时间（可不填）", 'placeholder -> "yy-MM-dd HH:mm:ss", '_showConstraints -> false)
+        @helper.inputText(dataForm("endTime"), '_label -> "日志最晚时间（可不填）", 'placeholder -> "yy-MM-dd HH:mm:ss", '_showConstraints -> false)
+
         <p>日志文件</p>
         <input type="file" name="logfile">
 
