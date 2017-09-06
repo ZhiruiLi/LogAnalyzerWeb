@@ -15,8 +15,4 @@ class HomeController @Inject()(cc: ControllerComponents) extends AbstractControl
   def editRule() = Action { implicit request =>
     Ok(views.html.analyzer.ruleeditor())
   }
-
-  def testForm() = Action { implicit request =>
-    Ok(views.html.testform())
-  }
 }

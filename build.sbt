@@ -1,7 +1,5 @@
 val scalaV = "2.12.2"
 
-lazy val analyzer = ProjectRef(file("../LogAnalyzer"), "loganalyzer")
-
 lazy val server = (project in file("server")).settings(
   scalaVersion := scalaV,
   scalaJSProjects := Seq(client),
@@ -17,7 +15,7 @@ lazy val server = (project in file("server")).settings(
   // Compile the project before generating Eclipse files, so that generated .scala or .class files for views and routes are present
   EclipseKeys.preTasks := Seq(compile in Compile)
 ).enablePlugins(PlayScala).
-  dependsOn(sharedJvm).dependsOn(analyzer)
+  dependsOn(sharedJvm)
 
 lazy val client = (project in file("client")).settings(
   scalaVersion := scalaV,
