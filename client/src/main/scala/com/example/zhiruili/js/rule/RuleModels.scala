@@ -1,4 +1,4 @@
-package com.example.zhiruili.js
+package com.example.zhiruili.js.rule
 
 object RuleModels {
 
